@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-rojo: #dc2626;
+  --color-azul: #2563eb;
+  --color-verde: #16a34a;
+  --color-amarillo: #ca8a04;
+  --board-bg: #f5e6c8;
+  --board-border: #8b6914;
+}
+
+body { background: #1a1a2e; color: #eee; font-family: 'Segoe UI', sans-serif; }
+
+.ficha-rojo    { background: var(--color-rojo); }
+.ficha-azul    { background: var(--color-azul); }
+.ficha-verde   { background: var(--color-verde); }
+.ficha-amarillo{ background: var(--color-amarillo); }
+
+.casilla-seguro { background: rgba(255,255,255,0.15) !important; border: 2px solid gold !important; }
+.casilla-salida { background: rgba(255,215,0,0.2) !important; border: 2px dashed gold !important; }
