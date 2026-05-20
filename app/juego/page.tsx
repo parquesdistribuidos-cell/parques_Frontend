@@ -238,7 +238,7 @@ export default function JuegoPage() {
               <span>{dadoA ? getDadoEmoji(dadoA) : "🎲"}</span>
               <span>{dadoB ? getDadoEmoji(dadoB) : "🎲"}</span>
             </div>
-            {dadoA > 0 && (
+            {dadoA != null && dadoB != null && dadoA > 0 && (
               <div className={`text-sm ${esPar ? "text-yellow-400 font-bold" : "text-gray-400"}`}>
                 {dadoA} + {dadoB} = {dadoA + dadoB} {esPar && "⭐ PAR"}
               </div>
