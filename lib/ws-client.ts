@@ -8,6 +8,9 @@ export class WSClient {
   private reconnectDelay = 2000;
 
   connect(token: string): Promise<void> {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return Promise.resolve();
+    }
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(WS_URL);
       this.ws.onopen = () => {

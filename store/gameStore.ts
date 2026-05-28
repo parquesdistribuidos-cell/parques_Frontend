@@ -45,12 +45,14 @@ interface GameStore {
   esPar: boolean;
   movimientosLegales: unknown[];
   accionRequerida: string | null;
+  esperandoAccion: boolean;
   setEnPartida: (v: boolean) => void;
   setTurno: (id: number | null) => void;
   setTablero: (t: Record<string, unknown>) => void;
   setDados: (a: number, b: number, par: boolean) => void;
   setMovimientos: (movs: unknown[]) => void;
   setAccion: (a: string | null) => void;
+  setEsperandoAccion: (v: boolean) => void;
 
   // Chat
   mensajes: ChatMsg[];
@@ -71,7 +73,7 @@ interface GameStore {
 
 export const useGameStore = create<GameStore>((set) => ({
   token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
-  usuarioId: null,
+  usuarioId: typeof window !== "undefined" ? (localStorage.getItem("usuarioId") ? Number(localStorage.getItem("usuarioId")) : null) : null,
   username: typeof window !== "undefined" ? localStorage.getItem("username") : null,
   setAuth: (token, id, username) => {
     localStorage.setItem("token", token);
@@ -92,13 +94,14 @@ export const useGameStore = create<GameStore>((set) => ({
 
   enPartida: false, turnoActual: null, tablero: null,
   dadoA: null, dadoB: null, esPar: false,
-  movimientosLegales: [], accionRequerida: null,
+  movimientosLegales: [], accionRequerida: null, esperandoAccion: false,
   setEnPartida: (enPartida) => set({ enPartida }),
   setTurno: (turnoActual) => set({ turnoActual }),
   setTablero: (tablero) => set({ tablero }),
   setDados: (dadoA, dadoB, esPar) => set({ dadoA, dadoB, esPar }),
   setMovimientos: (movimientosLegales) => set({ movimientosLegales }),
   setAccion: (accionRequerida) => set({ accionRequerida }),
+  setEsperandoAccion: (esperandoAccion) => set({ esperandoAccion }),
 
   mensajes: [],
   addMensaje: (m) => set((s) => ({ mensajes: [...s.mensajes.slice(-100), m] })),
@@ -112,14 +115,14 @@ export const useGameStore = create<GameStore>((set) => ({
   resetPartida: () => set({
     enPartida: false, turnoActual: null, tablero: null,
     dadoA: null, dadoB: null, esPar: false,
-    movimientosLegales: [], accionRequerida: null,
+    movimientosLegales: [], accionRequerida: null, esperandoAccion: false,
     mensajes: [], recomendacion: null,
   }),
   resetTodo: () => set({
     pin: null, nombreSala: null, jugadores: [], miColor: null, miListo: false,
     enPartida: false, turnoActual: null, tablero: null,
     dadoA: null, dadoB: null, esPar: false,
-    movimientosLegales: [], accionRequerida: null,
+    movimientosLegales: [], accionRequerida: null, esperandoAccion: false,
     mensajes: [], recomendacion: null, notificacion: null,
   }),
 }));

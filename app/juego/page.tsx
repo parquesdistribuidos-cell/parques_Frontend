@@ -17,15 +17,18 @@ export default function JuegoPage() {
     movimientosLegales, accionRequerida,
     mensajes, recomendacion, notificacion,
     setTablero, setTurno, setDados, setMovimientos,
-    setAccion, addMensaje, setRecomendacion, setNotificacion,
+    setAccion, setEsperandoAccion, addMensaje, setRecomendacion, setNotificacion,
     setEnPartida, resetTodo,
+    esperandoAccion,
   } = useGameStore();
 
   const [chatInput, setChatInput] = useState("");
   const [ganador, setGanador] = useState<null | { username: string; color: string }>(null);
   const [log, setLog] = useState<string[]>([]);
   const [dadosAnimando, setDadosAnimando] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
   const chatRef = useRef<HTMLDivElement>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   const esMiTurno = turnoActual === usuarioId;
   const jugadorActual = jugadores.find(j => j.id === turnoActual);
@@ -42,16 +45,17 @@ export default function JuegoPage() {
           addLog(`🎮 Partida iniciada! Primer turno: jugador ${p.primer_turno}`);
           break;
 
-        case "TURNO_ASIGNADO":
+        case "TURNO_ASIGNADO": {
           setTurno(p.jugador_id as number);
           setMovimientos([]);
-          setAccion(null);
           setDados(0, 0, false);
+          if ((p.jugador_id as number) === usuarioId) setEsperandoAccion(true);
           if (p.fase !== "tirada_inicial") {
             const j = jugadores.find(j => j.id === p.jugador_id);
             addLog(`🎯 Turno de ${j?.username || p.jugador_id}`);
           }
           break;
+        }
 
         case "DADOS_RESULTADO":
           setDadosAnimando(true);
@@ -66,6 +70,7 @@ export default function JuegoPage() {
 
         case "ACCION_REQUERIDA":
           setAccion(p.accion as string);
+          setEsperandoAccion(false);
           if (p.accion === "MOVER_FICHA") {
             setMovimientos(p.movimientos_legales as unknown[]);
           }
@@ -138,15 +143,24 @@ export default function JuegoPage() {
   }, [token, jugadores]);
 
   useEffect(() => {
-    chatRef.current?.scrollTo(0, chatRef.current.scrollHeight);
-  }, [mensajes]);
+    if (!autoScroll) return;
+    requestAnimationFrame(() => {
+      chatBottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  }, [mensajes, autoScroll]);
+
+  function handleChatScroll() {
+    const el = chatRef.current;
+    if (!el) return;
+    setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
+  }
 
   function addLog(msg: string) {
     setLog(prev => [...prev.slice(-50), msg]);
   }
 
   function lanzarDados() {
-    if (!esMiTurno || accionRequerida !== "LANZAR_DADOS") return;
+    if (!esMiTurno || accionRequerida !== "LANZAR_DADOS" || esperandoAccion) return;
     wsClient.send("LANZAR_DADOS");
   }
 
@@ -167,6 +181,13 @@ export default function JuegoPage() {
 
   function pedirRecomendacion() {
     wsClient.send("SOLICITAR_RECOMENDACION");
+  }
+
+  function abandonarPartida() {
+    if (!confirm("¿Abandonar la partida? No podrás volver a unirte.")) return;
+    wsClient.send("SALIR_SALA");
+    resetTodo();
+    router.push("/lobby");
   }
 
   function getDadoEmoji(val: number) {
@@ -199,7 +220,13 @@ export default function JuegoPage() {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-3 bg-black/30 border-b border-white/10">
-        <div className="text-white font-bold">🎲 Parqués — Sala {pin}</div>
+        <div className="flex items-center gap-4">
+          <div className="text-white font-bold">🎲 Parqués — Sala {pin}</div>
+          <button onClick={abandonarPartida}
+            className="text-xs text-red-400 hover:text-red-300 border border-red-500/40 hover:border-red-400 px-2 py-1 rounded-lg transition-colors">
+            Abandonar
+          </button>
+        </div>
         <div className="flex items-center gap-4">
           {jugadores.map(j => (
             <div key={j.id} className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm transition-all ${
@@ -219,7 +246,7 @@ export default function JuegoPage() {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Panel izquierdo — Dados y acciones */}
         <div className="w-72 bg-black/20 border-r border-white/10 p-4 space-y-4 overflow-y-auto">
           {/* Turno actual */}
@@ -243,10 +270,17 @@ export default function JuegoPage() {
                 {dadoA} + {dadoB} = {dadoA + dadoB} {esPar && "⭐ PAR"}
               </div>
             )}
-            {esMiTurno && accionRequerida === "LANZAR_DADOS" && (
-              <button onClick={lanzarDados}
-                className="mt-3 w-full py-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all active:scale-95">
-                🎲 Lanzar dados
+            {esMiTurno && (accionRequerida === "LANZAR_DADOS" || esperandoAccion) && (
+              <button
+                onClick={lanzarDados}
+                disabled={esperandoAccion || accionRequerida !== "LANZAR_DADOS"}
+                className={`mt-3 w-full py-2 font-semibold rounded-xl transition-all active:scale-95 ${
+                  esperandoAccion
+                    ? "bg-gray-600 text-gray-400 cursor-wait animate-pulse"
+                    : "bg-purple-600 hover:bg-purple-500 text-white"
+                }`}
+              >
+                {esperandoAccion ? "⏳ Preparando turno..." : "🎲 Lanzar dados"}
               </button>
             )}
           </div>
@@ -311,11 +345,11 @@ export default function JuegoPage() {
         </div>
 
         {/* Panel derecho — Chat */}
-        <div className="w-72 bg-black/20 border-l border-white/10 flex flex-col">
-          <div className="p-4 border-b border-white/10">
+        <div className="w-72 min-h-0 bg-black/20 border-l border-white/10 flex flex-col flex-shrink-0">
+          <div className="p-4 border-b border-white/10 flex-shrink-0">
             <h3 className="text-white font-semibold text-sm">💬 Chat</h3>
           </div>
-          <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div ref={chatRef} onScroll={handleChatScroll} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
             {mensajes.length === 0 && (
               <p className="text-gray-600 text-xs text-center">Los mensajes aparecerán aquí</p>
             )}
@@ -327,12 +361,13 @@ export default function JuegoPage() {
                 <div className="text-white">{m.contenido}</div>
               </div>
             ))}
+            <div ref={chatBottomRef} />
           </div>
-          <div className="p-3 border-t border-white/10 flex gap-2">
+          <div className="p-3 border-t border-white/10 flex gap-2 flex-shrink-0">
             <input value={chatInput} onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && enviarChat()}
               placeholder="Escribe..." maxLength={200}
-              className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-400 placeholder-gray-600" />
+              className="flex-1 min-w-0 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-400 placeholder-gray-600" />
             <button onClick={enviarChat}
               className="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm">
               ➤
