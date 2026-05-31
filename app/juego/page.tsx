@@ -63,6 +63,7 @@ export default function JuegoPage() {
   const [log, setLog] = useState<string[]>([]);
   const [dadosAnimando, setDadosAnimando] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -120,6 +121,10 @@ export default function JuegoPage() {
   function etiquetaFicha(fichaId: number) {
     return `Ficha ${etiquetaFichaCorta(fichaId)}`;
   }
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -312,6 +317,14 @@ export default function JuegoPage() {
 
   function getDadoEmoji(val: number) {
     return ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"][val] || "🎲";
+  }
+
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        Cargando...
+      </div>
+    );
   }
 
   if (ganador) {

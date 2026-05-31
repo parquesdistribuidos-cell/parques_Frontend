@@ -20,29 +20,26 @@ const ROTATE_COLOR: Record<string, string> = {
   amarillo: "amarillo",
 };
 
-const SEGUROS = new Set([
-  5, 12, 17, 22, 26, 29, 34, 39, 43, 46, 51, 56, 60, 63, 68, 9,
-]);
-const SALIDAS = new Set([5, 22, 39, 56]);
+const SEGUROS = new Set([3, 10, 15, 20, 27, 32, 37, 44, 49, 54, 66, 61]);
+const SALIDAS = new Set([10, 61, 44, 27]);
 const SALIDA_COLOR: Record<number, string> = {
-  5: "azul",
-  22: "amarillo",
-  39: "verde",
-  56: "rojo",
+  10: "azul",
+  61: "amarillo",
+  44: "verde",
+  27: "rojo",
 };
 
-function getCasillaPos(num: number): { x: number; y: number } {
-  const SIZE = 520;
-  const MARGIN = 40;
-  const CELL = (SIZE - MARGIN * 2) / 17;
-  if (num >= 1 && num <= 17)
-    return { x: MARGIN + (num - 1) * CELL, y: SIZE - MARGIN };
-  if (num >= 18 && num <= 34)
-    return { x: SIZE - MARGIN, y: SIZE - MARGIN - (num - 17) * CELL };
-  if (num >= 35 && num <= 51)
-    return { x: SIZE - MARGIN - (num - 34) * CELL, y: MARGIN };
-  return { x: MARGIN, y: MARGIN + (num - 51) * CELL };
-}
+const BOARD_SIZE = 520; // tamaño total del SVG; cambiarlo requiere ajustar viewBox/dibujos
+const BOARD_INSET = 8; // margen interno del marco; mayor = pista mas adentro
+const SQ = 11; // mitad del lado de cada casilla; mayor = casillas mas grandes
+const JAIL_SIZE = 100; // tamaño del cuadrado de carcel; mayor = carceles mas grandes
+const JAIL_LABEL_OFFSET_Y = 32; // separacion del texto bajo la carcel; mayor = texto mas abajo
+const BOARD_CENTER = 260; // centro del tablero; debe ser BOARD_SIZE / 2
+
+const OUTER_PADDING = 0; // margen para alejar la pista del borde; mayor = pista mas adentro
+const NOTCH_DEPTH = 90; // 100 profundidad del arco invertido; mayor = mas hundido hacia el centro
+const MIN_CENTER_CLEARANCE = 0; //80  separacion minima respecto al centro; mayor = pista mas lejos del centro
+// CURVE_SAMPLES eliminado: la ruta ahora es rectilinea
 
 function displayColor(color: string) {
   return ROTATE_COLOR[color] || color;
@@ -50,36 +47,170 @@ function displayColor(color: string) {
 
 const CARCEL_POS: Record<string, { cx: number; cy: number }[]> = {
   rojo: [
-    { cx: 90, cy: 90 },
-    { cx: 125, cy: 90 },
-    { cx: 90, cy: 125 },
-    { cx: 125, cy: 125 },
+    { cx: 60, cy: 60 },
+    { cx: 95, cy: 60 },
+    { cx: 60, cy: 95 },
+    { cx: 95, cy: 95 },
   ],
   verde: [
-    { cx: 395, cy: 90 },
-    { cx: 430, cy: 90 },
-    { cx: 395, cy: 125 },
-    { cx: 430, cy: 125 },
+    { cx: 425, cy: 60 },
+    { cx: 460, cy: 60 },
+    { cx: 425, cy: 95 },
+    { cx: 460, cy: 95 },
   ],
   amarillo: [
-    { cx: 395, cy: 395 },
-    { cx: 430, cy: 395 },
-    { cx: 395, cy: 430 },
-    { cx: 430, cy: 430 },
+    { cx: 425, cy: 425 },
+    { cx: 460, cy: 425 },
+    { cx: 425, cy: 460 },
+    { cx: 460, cy: 460 },
   ],
   azul: [
-    { cx: 90, cy: 395 },
-    { cx: 125, cy: 395 },
-    { cx: 90, cy: 430 },
-    { cx: 125, cy: 430 },
+    { cx: 60, cy: 425 },
+    { cx: 95, cy: 425 },
+    { cx: 60, cy: 460 },
+    { cx: 95, cy: 460 },
   ],
 };
 
+function buildTrackPositions(): Array<{ x: number; y: number }> {
+  const center = { x: BOARD_CENTER, y: BOARD_CENTER };
+  const halfJail = JAIL_SIZE / 2;
+  const colors = ["rojo", "verde", "amarillo", "azul"] as const;
+
+  const centers = colors.map((color) => {
+    const slots = CARCEL_POS[color] || [];
+    const sum = slots.reduce(
+      (acc, slot) => ({ x: acc.x + slot.cx, y: acc.y + slot.cy }),
+      { x: 0, y: 0 },
+    );
+    return { cx: sum.x / slots.length, cy: sum.y / slots.length };
+  });
+
+  const jailBounds = centers.reduce(
+    (acc, c, idx) => {
+      const color = colors[idx];
+      acc[color] = {
+        left: c.cx - halfJail,
+        right: c.cx + halfJail,
+        top: c.cy - halfJail,
+        bottom: c.cy + halfJail,
+      };
+      return acc;
+    },
+    {} as Record<
+      (typeof colors)[number],
+      { left: number; right: number; top: number; bottom: number }
+    >,
+  );
+
+  const leftMaxRight = Math.max(jailBounds.rojo.right, jailBounds.azul.right);
+  const rightMinLeft = Math.min(
+    jailBounds.verde.left,
+    jailBounds.amarillo.left,
+  );
+  const topMaxBottom = Math.max(
+    jailBounds.rojo.bottom,
+    jailBounds.verde.bottom,
+  );
+  const bottomMinTop = Math.min(jailBounds.azul.top, jailBounds.amarillo.top);
+
+  const centerSquareHalf = 84;
+  const step = SQ * 2;
+
+  const bounds = {
+    minX: BOARD_INSET + SQ + OUTER_PADDING,
+    maxX: BOARD_SIZE - BOARD_INSET - SQ - OUTER_PADDING,
+    minY: BOARD_INSET + SQ + OUTER_PADDING,
+    maxY: BOARD_SIZE - BOARD_INSET - SQ - OUTER_PADDING,
+  };
+
+  const outerLeft = bounds.minX;
+  const outerRight = bounds.maxX;
+  const outerTop = bounds.minY;
+  const outerBottom = bounds.maxY;
+
+  const centerLeftLimit = center.x - centerSquareHalf - MIN_CENTER_CLEARANCE;
+  const centerRightLimit = center.x + centerSquareHalf + MIN_CENTER_CLEARANCE;
+  const centerTopLimit = center.y - centerSquareHalf - MIN_CENTER_CLEARANCE;
+  const centerBottomLimit = center.y + centerSquareHalf + MIN_CENTER_CLEARANCE;
+
+  const desiredInnerLeft = leftMaxRight + NOTCH_DEPTH;
+  const desiredInnerRight = rightMinLeft - NOTCH_DEPTH;
+  const desiredInnerTop = topMaxBottom + NOTCH_DEPTH;
+  const desiredInnerBottom = bottomMinTop - NOTCH_DEPTH;
+
+  const innerLeft = Math.min(
+    centerLeftLimit,
+    Math.max(desiredInnerLeft, outerLeft + step),
+  );
+  const innerRight = Math.max(
+    centerRightLimit,
+    Math.min(desiredInnerRight, outerRight - step),
+  );
+  const innerTop = Math.min(
+    centerTopLimit,
+    Math.max(desiredInnerTop, outerTop + step),
+  );
+  const innerBottom = Math.max(
+    centerBottomLimit,
+    Math.min(desiredInnerBottom, outerBottom - step),
+  );
+
+  const ordered = [
+    { x: innerLeft, y: outerBottom },
+    { x: innerRight, y: outerBottom },
+    { x: innerRight, y: innerBottom },
+    { x: outerRight, y: innerBottom },
+    { x: outerRight, y: innerTop },
+    { x: innerRight, y: innerTop },
+    { x: innerRight, y: outerTop },
+    { x: innerLeft, y: outerTop },
+    { x: innerLeft, y: innerTop },
+    { x: outerLeft, y: innerTop },
+    { x: outerLeft, y: innerBottom },
+    { x: innerLeft, y: innerBottom },
+    { x: innerLeft, y: outerBottom },
+  ];
+
+  const cumulative = [0];
+  for (let i = 1; i < ordered.length; i += 1) {
+    const dx = ordered[i].x - ordered[i - 1].x;
+    const dy = ordered[i].y - ordered[i - 1].y;
+    cumulative[i] = cumulative[i - 1] + Math.hypot(dx, dy);
+  }
+
+  const total = cumulative[cumulative.length - 1];
+  const casillas: Array<{ x: number; y: number }> = [];
+  for (let i = 0; i < 68; i += 1) {
+    const target = (total * i) / 68;
+    let seg = 1;
+    while (seg < cumulative.length && cumulative[seg] < target) seg += 1;
+    const prev = cumulative[seg - 1];
+    const span = cumulative[seg] - prev || 1;
+    const t = (target - prev) / span;
+    const p0 = ordered[seg - 1];
+    const p1 = ordered[seg];
+    casillas.push({
+      x: p0.x + (p1.x - p0.x) * t,
+      y: p0.y + (p1.y - p0.y) * t,
+    });
+  }
+
+  return casillas;
+}
+
+const CASILLA_POS = buildTrackPositions();
+
+function getCasillaPos(num: number): { x: number; y: number } {
+  const idx = (((num - 1) % 68) + 68) % 68;
+  return CASILLA_POS[idx] || { x: BOARD_CENTER, y: BOARD_CENTER };
+}
+
 const RECTA_POS: Record<string, { x: number; y: number }[]> = {
-  azul: Array.from({ length: 8 }, (_, i) => ({ x: 260, y: 480 - i * 30 })),
-  amarillo: Array.from({ length: 8 }, (_, i) => ({ x: 40 + i * 30, y: 260 })),
+  amarillo: Array.from({ length: 8 }, (_, i) => ({ x: 480 - i * 30, y: 260 })),
+  rojo: Array.from({ length: 8 }, (_, i) => ({ x: 40 + i * 30, y: 260 })),
   verde: Array.from({ length: 8 }, (_, i) => ({ x: 260, y: 40 + i * 30 })),
-  rojo: Array.from({ length: 8 }, (_, i) => ({ x: 480 - i * 30, y: 260 })),
+  azul: Array.from({ length: 8 }, (_, i) => ({ x: 260, y: 480 - i * 30 })),
 };
 
 interface TableroProps {
@@ -102,10 +233,6 @@ interface FichaData {
   estado: string;
   posicion: number;
 }
-
-const SQ = 11; // half-size of path squares → 22×22 each
-const JAIL_SIZE = 100;
-const JAIL_LABEL_OFFSET_Y = 32;
 
 function etiquetaFicha(id: number, color?: string) {
   const numero = Math.abs(id) % 10;
@@ -354,6 +481,16 @@ export default function Tablero({
               }
               strokeWidth={esSalida || esSeguro ? 1.5 : 0.8}
             />
+            <text
+              x={x + SQ - 2}
+              y={y + SQ - 3}
+              textAnchor="end"
+              fill="#8B6914"
+              fontSize="6"
+              opacity="0.75"
+            >
+              {num}
+            </text>
             {esSeguro && !esSalida && (
               <text
                 x={x}
@@ -438,24 +575,6 @@ export default function Tablero({
           strokeWidth="2"
         />
       )}
-
-      {/* Square number labels at key positions */}
-      {[1, 9, 17, 22, 26, 34, 39, 43, 51, 56, 60, 68].map((num) => {
-        const { x, y } = getCasillaPos(num);
-        return (
-          <text
-            key={`n-${num}`}
-            x={x}
-            y={y - SQ - 3}
-            textAnchor="middle"
-            fill="#8B6914"
-            fontSize="7"
-            opacity="0.75"
-          >
-            {num}
-          </text>
-        );
-      })}
 
       {/* Pieces */}
       {fichas.map(({ data, x, y, key }) => {
