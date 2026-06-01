@@ -44,7 +44,7 @@ export default function LobbyPage() {
   const [salas, setSalas] = useState<unknown[]>([]);
   const [error, setError] = useState("");
   const [conectado, setConectado] = useState(false);
-  const [salandoBots, setSalandoBots] = useState(false);
+  const [simulandoPartida, setSimulandoPartida] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -89,6 +89,7 @@ export default function LobbyPage() {
           router.push("/juego");
           break;
         case "ERROR":
+          setSimulandoPartida(false);
           setError((msg.payload as { mensaje: string }).mensaje || "Error");
           break;
       }
@@ -136,6 +137,17 @@ export default function LobbyPage() {
   const coloresDisponibles = COLORES.filter(
     (c) => !jugadores.some((j) => j.color === c && j.id !== usuarioId),
   );
+  const humanos = jugadores.filter((j) => !j.es_bot);
+  const puedeSimular = humanos.length <= 1;
+
+  const simularPartida = () => {
+    if (!puedeSimular) {
+      setError("No puedes simular con otros jugadores humanos en la sala");
+      return;
+    }
+    setSimulandoPartida(true);
+    wsClient.send("SIMULAR_PARTIDA");
+  };
 
   if (!conectado) {
     return (
@@ -431,6 +443,21 @@ export default function LobbyPage() {
                   ? "✓ Listo — Click para cancelar"
                   : "Marcar como listo"}
               </button>
+
+              <button
+                onClick={simularPartida}
+                disabled={!puedeSimular || simulandoPartida}
+                className={`w-full py-3 font-semibold rounded-xl transition-all ${
+                  !puedeSimular || simulandoPartida
+                    ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-500 text-white"
+                }`}
+              >
+                {simulandoPartida ? "Simulando..." : "Simular (4 bots)"}
+              </button>
+              <div className="text-xs text-gray-400 text-center">
+                Arranca una partida automatizada sin que tengas que jugar.
+              </div>
 
               <div className="bg-white/5 rounded-xl p-4 border border-white/10 text-sm text-gray-400">
                 <p>• Mínimo 2 jugadores para iniciar</p>

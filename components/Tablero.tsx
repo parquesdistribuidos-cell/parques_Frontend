@@ -1,4 +1,5 @@
 "use client";
+import { vendored } from "next/dist/server/route-modules/app-page/module.compiled";
 import React, { useState } from "react";
 
 const COLOR_MAP: Record<string, string> = {
@@ -20,13 +21,13 @@ const ROTATE_COLOR: Record<string, string> = {
   amarillo: "amarillo",
 };
 
-const SEGUROS = new Set([3, 10, 15, 20, 27, 32, 37, 44, 49, 54, 66, 61]);
-const SALIDAS = new Set([10, 61, 44, 27]);
+const SEGUROS = new Set([21, 26, 33, 38, 43, 50, 55, 60, 67, 4, 9, 16]);
+const SALIDAS = new Set([9, 60, 43, 26]);
 const SALIDA_COLOR: Record<number, string> = {
-  10: "azul",
-  61: "amarillo",
-  44: "verde",
-  27: "rojo",
+  9: "amarillo",
+  60: "azul",
+  43: "rojo",
+  26: "verde",
 };
 
 const BOARD_SIZE = 520; // tamaño total del SVG; cambiarlo requiere ajustar viewBox/dibujos
@@ -207,10 +208,10 @@ function getCasillaPos(num: number): { x: number; y: number } {
 }
 
 const RECTA_POS: Record<string, { x: number; y: number }[]> = {
-  amarillo: Array.from({ length: 8 }, (_, i) => ({ x: 480 - i * 30, y: 260 })),
-  rojo: Array.from({ length: 8 }, (_, i) => ({ x: 40 + i * 30, y: 260 })),
-  verde: Array.from({ length: 8 }, (_, i) => ({ x: 260, y: 40 + i * 30 })),
-  azul: Array.from({ length: 8 }, (_, i) => ({ x: 260, y: 480 - i * 30 })),
+  rojo: Array.from({ length: 8 }, (_, i) => ({ x: 260, y: 40 + i * 30 })),
+  verde: Array.from({ length: 8 }, (_, i) => ({ x: 480 - i * 30, y: 260 })),
+  amarillo: Array.from({ length: 8 }, (_, i) => ({ x: 260, y: 480 - i * 30 })),
+  azul: Array.from({ length: 8 }, (_, i) => ({ x: 40 + i * 30, y: 260 })),
 };
 
 interface TableroProps {
@@ -409,22 +410,22 @@ export default function Tablero({
       {/* 4 colored triangles from each corner of center to the middle */}
       <polygon
         points="176,176 260,260 344,176"
-        fill={COLOR_MAP[displayColor("verde")]}
+        fill={COLOR_MAP[displayColor("rojo")]}
         fillOpacity="0.5"
       />
       <polygon
         points="344,176 260,260 344,344"
-        fill={COLOR_MAP[displayColor("amarillo")]}
+        fill={COLOR_MAP[displayColor("verde")]}
         fillOpacity="0.5"
       />
       <polygon
         points="344,344 260,260 176,344"
-        fill={COLOR_MAP[displayColor("azul")]}
+        fill={COLOR_MAP[displayColor("amarillo")]}
         fillOpacity="0.5"
       />
       <polygon
         points="176,344 260,260 176,176"
-        fill={COLOR_MAP[displayColor("rojo")]}
+        fill={COLOR_MAP[displayColor("azul")]}
         fillOpacity="0.5"
       />
       {/* Center circle (goal) */}
