@@ -126,6 +126,11 @@ export default function JuegoPage() {
     setHydrated(true);
   }, []);
 
+  const jugadoresRef = useRef(jugadores);
+  useEffect(() => {
+    jugadoresRef.current = jugadores;
+  }, [jugadores]);
+
   useEffect(() => {
     if (!token) {
       router.push("/login");
@@ -150,7 +155,7 @@ export default function JuegoPage() {
           setDados(0, 0, false);
           if ((p.jugador_id as number) === usuarioId) setEsperandoAccion(true);
           if (p.fase !== "tirada_inicial") {
-            const j = jugadores.find((j) => j.id === p.jugador_id);
+            const j = jugadoresRef.current.find((j) => j.id === p.jugador_id);
             addLog(`🎯 Turno de ${j?.username || p.jugador_id}`);
           }
           break;
@@ -258,7 +263,7 @@ export default function JuegoPage() {
     });
 
     return unsub;
-  }, [token, jugadores]);
+  }, [token]);
 
   useEffect(() => {
     if (!autoScroll) return;
