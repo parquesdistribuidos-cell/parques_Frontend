@@ -202,7 +202,7 @@ export default function JuegoPage() {
 
         case "TURNO_PARCIAL":
           addLog(
-            `🎲 ${p.username} debe mover con dado ${p.dado?.toUpperCase()} (${p.valor}) — movimiento ${p.movimiento_numero} de ${p.total_movimientos}`
+            `🎲 ${p.username} debe mover con dado ${(p.dado as string)?.toUpperCase()} (${p.valor}) — movimiento ${p.movimiento_numero} de ${p.total_movimientos}`
           );
           break;
 
