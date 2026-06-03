@@ -200,6 +200,12 @@ export default function JuegoPage() {
           setAccion(null);
           break;
 
+        case "TURNO_PARCIAL":
+          addLog(
+            `🎲 ${p.username} debe mover con dado ${p.dado?.toUpperCase()} (${p.valor}) — movimiento ${p.movimiento_numero} de ${p.total_movimientos}`
+          );
+          break;
+
         case "FICHA_CAPTURADA":
           addLog(
             `💥 ${etiquetaFicha(p.ficha_capturada_id as number)} capturada por ${p.captor_username}!`,
