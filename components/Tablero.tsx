@@ -1,5 +1,4 @@
 "use client";
-import { vendored } from "next/dist/server/route-modules/app-page/module.compiled";
 import React, { useState } from "react";
 
 const COLOR_MAP: Record<string, string> = {
@@ -278,6 +277,13 @@ export default function Tablero({
   const [hoveredLocal, setHoveredLocal] = useState<{
     ficha_id: number;
     destino_descripcion: string;
+  } | null>(null);
+
+  const [popupFicha, setPopupFicha] = useState<{
+  ficha_id: number;
+  x: number;
+  y: number;
+  opciones: Array<{ dado: string; valor: number; destino: string }>;
   } | null>(null);
 
   const fichas: Array<{ data: FichaData; x: number; y: number; key: string }> =
@@ -580,13 +586,31 @@ export default function Tablero({
       {/* Pieces */}
       {fichas.map(({ data, x, y, key }) => {
         const movible = esMiTurno && fichasMovibles.has(data.id);
-        const mov = movimientosLegales.find((m) => m.ficha_id === data.id);
+        const movsDeEstaFicha = movimientosLegales.filter((m) => m.ficha_id === data.id);
+        const mov = movsDeEstaFicha[0];
         const hoverFicha = activeHover?.ficha_id === data.id;
         return (
           <g
             key={key}
             style={{ cursor: movible ? "pointer" : "default" }}
-            onClick={() => movible && mov && onFichaClick?.(data.id, mov.valor)}
+            onClick={() => {
+              if (!movible || !movsDeEstaFicha.length) return;
+              if (movsDeEstaFicha.length > 1) {
+                setPopupFicha({
+                  ficha_id: data.id,
+                  x,
+                  y,
+                  opciones: movsDeEstaFicha.map((m) => ({
+                    dado: m.dado,
+                    valor: m.valor,
+                    destino: m.destino_descripcion,
+                  })),
+                });
+              } else {
+                setPopupFicha(null);
+                onFichaClick?.(data.id, mov.valor);
+              }
+            }}
             onMouseEnter={() => {
               if (!movible || !mov || hoveredMove) return;
               setHoveredLocal({
@@ -599,53 +623,97 @@ export default function Tablero({
             }}
           >
             {hoverFicha && (
-              <circle
-                cx={x}
-                cy={y}
-                r={17}
-                fill={highlightColor}
-                fillOpacity="0.12"
-                stroke={highlightColor}
-                strokeWidth={2}
-              />
+              <circle cx={x} cy={y} r={17} fill={highlightColor} fillOpacity="0.12" stroke={highlightColor} strokeWidth={2} />
             )}
             {movible && (
-              <circle
-                cx={x}
-                cy={y}
-                r={15}
-                fill={COLOR_MAP[data.color]}
-                fillOpacity="0.35"
-                className="animate-ping"
-                style={{ animationDuration: "1s" }}
-              />
+              <circle cx={x} cy={y} r={15} fill={COLOR_MAP[data.color]} fillOpacity="0.35" className="animate-ping" style={{ animationDuration: "1s" }} />
             )}
             <circle
-              cx={x}
-              cy={y}
-              r={10}
+              cx={x} cy={y} r={10}
               fill={COLOR_MAP[data.color] || "#888"}
               stroke={movible ? "white" : "rgba(0,0,0,0.4)"}
               strokeWidth={movible ? 2.5 : 1.5}
-              filter={
-                movible
-                  ? `drop-shadow(0 0 6px ${COLOR_MAP[data.color]})`
-                  : "drop-shadow(0 1px 2px rgba(0,0,0,0.3))"
-              }
+              filter={movible ? `drop-shadow(0 0 6px ${COLOR_MAP[data.color]})` : "drop-shadow(0 1px 2px rgba(0,0,0,0.3))"}
             />
-            <text
-              x={x}
-              y={y + 4}
-              textAnchor="middle"
-              fill="white"
-              fontSize="6"
-              fontWeight="bold"
-            >
+            <text x={x} y={y + 4} textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">
               {etiquetaFicha(data.id, data.color)}
             </text>
           </g>
         );
       })}
+
+      {/* Popup selección de dado */}
+      {popupFicha && (() => {
+        const { x, y, opciones, ficha_id } = popupFicha;
+        const btnW = 38;
+        const btnH = 36;
+        const gap = 6;
+        const padding = 8;
+        const totalW = opciones.length * btnW + (opciones.length - 1) * gap + padding * 2;
+        const boxH = btnH + padding * 2;
+        const tailH = 10;
+        const px = Math.min(Math.max(x - totalW / 2, 8), 520 - totalW - 8);
+        const py = y - boxH - tailH - 6;
+        const fichaColor = fichas.find((f) => f.data.id === ficha_id)?.data.color;
+        const borderColor = fichaColor ? COLOR_MAP[fichaColor] : "#a855f7";
+
+        return (
+          <g>
+            {/* Overlay transparente para cerrar al click fuera */}
+            <rect
+              x={0} y={0} width={520} height={520}
+              fill="transparent"
+              onClick={() => setPopupFicha(null)}
+            />
+            {/* Cuerpo del popup */}
+            <rect
+              x={px} y={py} width={totalW} height={boxH}
+              rx={8} fill="#1a1625"
+              stroke={borderColor} strokeWidth={2}
+              filter="drop-shadow(0 4px 14px rgba(0,0,0,0.7))"
+            />
+            {/* Colita */}
+            <polygon
+              points={`${x - 8},${py + boxH} ${x + 8},${py + boxH} ${x},${py + boxH + tailH}`}
+              fill="#1a1625"
+            />
+            {/* Borde colita — dos líneas diagonales */}
+            <line x1={x - 8} y1={py + boxH} x2={x} y2={py + boxH + tailH} stroke={borderColor} strokeWidth={2} />
+            <line x1={x + 8} y1={py + boxH} x2={x} y2={py + boxH + tailH} stroke={borderColor} strokeWidth={2} />
+
+            {/* Botones */}
+            {opciones.map((op, i) => {
+              const bx = px + padding + i * (btnW + gap);
+              const by = py + padding;
+              return (
+                <g
+                  key={i}
+                  style={{ cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPopupFicha(null);
+                    onFichaClick?.(ficha_id, op.valor);
+                  }}
+                >
+                  <rect
+                    x={bx} y={by} width={btnW} height={btnH}
+                    rx={7}
+                    fill={borderColor}
+                    fillOpacity={0.9}
+                  />
+                  <text
+                    x={bx + btnW / 2} y={by + btnH / 2 + 1}
+                    textAnchor="middle" dominantBaseline="middle"
+                    fill="white" fontSize="15" fontWeight="bold"
+                  >
+                    {op.valor}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        );
+      })()}
     </svg>
   );
 }
