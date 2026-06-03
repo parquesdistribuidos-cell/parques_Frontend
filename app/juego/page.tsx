@@ -364,7 +364,7 @@ export default function JuegoPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-3 bg-black/30 border-b border-white/10">
         <div className="flex items-center gap-4">
@@ -541,7 +541,7 @@ export default function JuegoPage() {
         </div>
 
         {/* Panel derecho — Chat */}
-        <div className="w-72 min-h-0 bg-black/20 border-l border-white/10 flex flex-col flex-shrink-0">
+        <div className="w-72 bg-black/20 border-l border-white/10 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
           <div className="p-4 border-b border-white/10 flex-shrink-0">
             <h3 className="text-white font-semibold text-sm">💬 Chat</h3>
           </div>
