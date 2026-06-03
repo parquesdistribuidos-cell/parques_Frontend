@@ -551,7 +551,7 @@ export default function JuegoPage() {
             className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2"
           >
             {mensajes.length === 0 && (
-              <p className="text-gray-600 text-xs text-center">
+              <p className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20">
                 Los mensajes aparecerán aquí
               </p>
             )}
