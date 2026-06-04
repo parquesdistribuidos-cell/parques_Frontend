@@ -584,6 +584,7 @@ export default function Tablero({
       )}
 
       {/* Pieces */}
+      {/* Pieces */}
       {fichas.map(({ data, x, y, key }) => {
         const movible = esMiTurno && fichasMovibles.has(data.id);
         const movsDeEstaFicha = movimientosLegales.filter((m) => m.ficha_id === data.id);
@@ -656,56 +657,20 @@ export default function Tablero({
         const py = y - boxH - tailH - 6;
         const fichaColor = fichas.find((f) => f.data.id === ficha_id)?.data.color;
         const borderColor = fichaColor ? COLOR_MAP[fichaColor] : "#a855f7";
-
         return (
           <g>
-            {/* Overlay transparente para cerrar al click fuera */}
-            <rect
-              x={0} y={0} width={520} height={520}
-              fill="transparent"
-              onClick={() => setPopupFicha(null)}
-            />
-            {/* Cuerpo del popup */}
-            <rect
-              x={px} y={py} width={totalW} height={boxH}
-              rx={8} fill="#1a1625"
-              stroke={borderColor} strokeWidth={2}
-              filter="drop-shadow(0 4px 14px rgba(0,0,0,0.7))"
-            />
-            {/* Colita */}
-            <polygon
-              points={`${x - 8},${py + boxH} ${x + 8},${py + boxH} ${x},${py + boxH + tailH}`}
-              fill="#1a1625"
-            />
-            {/* Borde colita — dos líneas diagonales */}
+            <rect x={0} y={0} width={520} height={520} fill="transparent" onClick={() => setPopupFicha(null)} />
+            <rect x={px} y={py} width={totalW} height={boxH} rx={8} fill="#1a1625" stroke={borderColor} strokeWidth={2} filter="drop-shadow(0 4px 14px rgba(0,0,0,0.7))" />
+            <polygon points={`${x - 8},${py + boxH} ${x + 8},${py + boxH} ${x},${py + boxH + tailH}`} fill="#1a1625" />
             <line x1={x - 8} y1={py + boxH} x2={x} y2={py + boxH + tailH} stroke={borderColor} strokeWidth={2} />
             <line x1={x + 8} y1={py + boxH} x2={x} y2={py + boxH + tailH} stroke={borderColor} strokeWidth={2} />
-
-            {/* Botones */}
             {opciones.map((op, i) => {
               const bx = px + padding + i * (btnW + gap);
               const by = py + padding;
               return (
-                <g
-                  key={i}
-                  style={{ cursor: "pointer" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPopupFicha(null);
-                    onFichaClick?.(ficha_id, op.valor);
-                  }}
-                >
-                  <rect
-                    x={bx} y={by} width={btnW} height={btnH}
-                    rx={7}
-                    fill={borderColor}
-                    fillOpacity={0.9}
-                  />
-                  <text
-                    x={bx + btnW / 2} y={by + btnH / 2 + 1}
-                    textAnchor="middle" dominantBaseline="middle"
-                    fill="white" fontSize="15" fontWeight="bold"
-                  >
+                <g key={i} style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); setPopupFicha(null); onFichaClick?.(ficha_id, op.valor); }}>
+                  <rect x={bx} y={by} width={btnW} height={btnH} rx={7} fill={borderColor} fillOpacity={0.9} />
+                  <text x={bx + btnW / 2} y={by + btnH / 2 + 1} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="15" fontWeight="bold">
                     {op.valor}
                   </text>
                 </g>
