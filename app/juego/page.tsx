@@ -66,6 +66,8 @@ export default function JuegoPage() {
   const [hydrated, setHydrated] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const [dadoActual, setDadoActual] = useState<string | null>(null);
+  const [dadesDisponibles, setDadesDisponibles] = useState<string[]>([]);
 
   const esMiTurno = turnoActual === usuarioId;
   const jugadorActual = jugadores.find((j) => j.id === turnoActual);
@@ -153,6 +155,8 @@ export default function JuegoPage() {
           setMovimientos([]);
           setMovimientoHover(null);
           setDados(0, 0, false);
+          setDadoActual(null);
+          setDadesDisponibles([]);
           if ((p.jugador_id as number) === usuarioId) setEsperandoAccion(true);
           if (p.fase !== "tirada_inicial") {
             const j = jugadoresRef.current.find((j) => j.id === p.jugador_id);
@@ -184,7 +188,16 @@ export default function JuegoPage() {
           if (p.accion === "MOVER_FICHA") {
             setMovimientos(p.movimientos_legales as unknown[]);
             setMovimientoHover(null);
+            setDadesDisponibles((p.dados_disponibles as string[]) ?? ["a", "b"]);
           }
+          break;
+
+        case "FICHA_MOVIDA":
+          if (p.tablero) setTablero(p.tablero as Record<string, unknown>);
+          addLog(`♟️ ${p.username} movió ${etiquetaFicha(p.ficha_id as number)}`);
+          // Si aún hay dados disponibles NO limpiar movimientos — el servidor mandará nuevo ACCION_REQUERIDA
+          setMovimientoHover(null);
+          setAccion(null);
           break;
 
         case "ESTADO_TABLERO":
@@ -463,6 +476,19 @@ export default function JuegoPage() {
               )}
           </div>
 
+          {/* Indicador de dado activo */}
+          {esMiTurno && dadoActual && (movimientosLegales as MovimientoLegal[]).length > 0 && (
+            <div className="bg-white/5 rounded-xl px-4 py-2 border border-purple-500/40 text-center">
+              <span className="text-gray-400 text-xs">Moviendo con dado </span>
+              <span className="text-white font-bold text-lg">
+                {dadoActual === "a" ? getDadoEmoji(dadoA ?? 0) : getDadoEmoji(dadoB ?? 0)}
+              </span>
+              <span className="text-purple-400 text-sm ml-2">
+                ({dadoActual === "a" ? dadoA : dadoB})
+              </span>
+            </div>
+          )}
+
           {/* Movimientos disponibles */}
           {esMiTurno &&
             (movimientosLegales as MovimientoLegal[]).length > 0 && (
@@ -548,6 +574,7 @@ export default function JuegoPage() {
             movimientosLegales={movimientosLegales as MovimientoLegal[]}
             hoveredMove={movimientoHover}
             onFichaClick={moverFicha}
+            dadesDisponibles={dadesDisponibles}
           />
         </div>
 

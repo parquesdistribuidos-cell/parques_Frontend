@@ -215,6 +215,7 @@ const RECTA_POS: Record<string, { x: number; y: number }[]> = {
 
 interface TableroProps {
   tablero: Record<string, unknown> | null;
+  dadesDisponibles?: string[];
   turnoActual: number | null;
   usuarioId: number | null;
   movimientosLegales: Array<{
@@ -271,6 +272,7 @@ export default function Tablero({
   movimientosLegales,
   hoveredMove,
   onFichaClick,
+  dadesDisponibles
 }: TableroProps) {
   const esMiTurno = turnoActual === usuarioId;
   const fichasMovibles = new Set(movimientosLegales.map((m) => m.ficha_id));
@@ -596,12 +598,19 @@ export default function Tablero({
             style={{ cursor: movible ? "pointer" : "default" }}
             onClick={() => {
               if (!movible || !movsDeEstaFicha.length) return;
-              if (movsDeEstaFicha.length > 1) {
+
+              // Filtrar solo movimientos cuyos dados están disponibles
+              const opcionesUnicas = movsDeEstaFicha
+                .filter((m, idx, arr) =>
+                  arr.findIndex((o) => o.valor === m.valor && o.dado === m.dado) === idx
+                );
+
+              if (opcionesUnicas.length > 1) {
                 setPopupFicha({
                   ficha_id: data.id,
                   x,
                   y,
-                  opciones: movsDeEstaFicha.map((m) => ({
+                  opciones: opcionesUnicas.map((m) => ({
                     dado: m.dado,
                     valor: m.valor,
                     destino: m.destino_descripcion,
@@ -609,7 +618,7 @@ export default function Tablero({
                 });
               } else {
                 setPopupFicha(null);
-                onFichaClick?.(data.id, mov.valor);
+                onFichaClick?.(data.id, opcionesUnicas[0].valor);
               }
             }}
             onMouseEnter={() => {
